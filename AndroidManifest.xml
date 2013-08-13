@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      package="org.meulenhoff.pebblemytracks"
+      android:versionCode="1"
+      android:versionName="0.1">
+    <uses-sdk android:minSdkVersion="7"/>
+
+    <uses-permission android:name="com.google.android.apps.mytracks.READ_TRACK_DATA" />
+    <uses-permission android:name="com.google.android.apps.mytracks.WRITE_TRACK_DATA" />
+    <uses-permission android:name="com.google.android.apps.mytracks.TRACK_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.READ_LOGS" />
+    
+    <application android:icon="@drawable/pebblemytracks"
+                 android:label="@string/app_name"
+                 android:name="org.meulenhoff.pebblemytracks.MyApplication">
+        <activity android:label="@string/app_name"
+                  android:name="org.meulenhoff.pebblemytracks.MyPreferencesActivity">
+             <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <receiver android:exported="true"
+                  android:name="org.meulenhoff.pebblemytracks.MyTracksReceiver">
+            <intent-filter>
+                <action android:name="com.google.android.apps.mytracks.TRACK_STARTED" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.google.android.apps.mytracks.TRACK_STOPPED" />
+            </intent-filter> 
+            <intent-filter>
+                <action android:name="com.getpebble.action.app.RECEIVE" />
+            </intent-filter>                    
+       </receiver>
+        
+        <service android:name="org.meulenhoff.pebblemytracks.PebbleSportsService" />
+        
+    </application>
+    
+</manifest>

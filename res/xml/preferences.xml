@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <PreferenceCategory android:title="Pebble Settings">
+        <CheckBoxPreference android:key="metric" android:summary="Use metric units, km instead of miles." android:title="Metric units"/>
+        <ListPreference android:title="Update Interval" android:key="updateInterval" android:summary="Specify the update frequency of the Pebble" android:entries="@array/updateInterval" android:entryValues="@array/updateIntervalValues"/>
+        <CheckBoxPreference android:key="UseAlternativeSportsApp" android:title="Alternative Sports App" android:summary="Use an alternative sports app instead of the Pebble sports watchapp"/>
+<!--         <CheckBoxPreference android:summary="Check this option to enable more verbosive state reporting and debugging" android:key="debug" android:title="Turn on debugging"/>
+        <Preference android:title="Send debug logging"
+                android:key="button"
+                android:summary="Select this option to send a debug log to me."/>-->
+    </PreferenceCategory>
+    <PreferenceScreen android:title="Display Parameters" android:key="alternativePreferenceScreen" android:summary="Configure the parameters to display on the alternative watchapp">
+    </PreferenceScreen>
+</PreferenceScreen>
