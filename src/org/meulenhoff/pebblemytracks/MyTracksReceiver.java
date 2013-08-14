@@ -69,7 +69,7 @@ public class MyTracksReceiver extends BroadcastReceiver {
       Log.i(TAG,"received TRACK_STARTED");
       
       Intent service = new Intent(context,PebbleSportsService.class);
-      service.putExtra("CMD", PebbleSportsService.MYTRACKS_TRACK_STARTED);
+      service.putExtra("CMD", PebbleSportsService.EVENT_MYTRACKS_STARTED);
       context.startService(service);
      
       
@@ -78,7 +78,7 @@ public class MyTracksReceiver extends BroadcastReceiver {
       Log.i(TAG,"received TRACK_STOPPED");
       
       Intent service = new Intent(context,PebbleSportsService.class);
-      service.putExtra("CMD", PebbleSportsService.MYTRACKS_TRACK_STOPPED);
+      service.putExtra("CMD", PebbleSportsService.EVENT_MYTRACKS_STOPPED);
       context.startService(service);
      
     } else if ( action.equals("com.getpebble.action.app.RECEIVE") ) {

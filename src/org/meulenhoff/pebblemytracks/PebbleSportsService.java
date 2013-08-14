@@ -5,11 +5,13 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.preference.Preference.OnPreferenceChangeListener;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -31,40 +33,42 @@ import java.util.concurrent.TimeUnit;
 import org.meulenhoff.pebblemytracks.MyAppSettings.ParameterType;
 
 @SuppressWarnings("unused")
-public class PebbleSportsService extends Service {
+public class PebbleSportsService extends Service implements OnSharedPreferenceChangeListener {
 	private final String TAG = "PebbleMyTracks";
 
 	// commands sent by smartphone
 	public static final int MSG_SET_VALUES = 0x1;
 	public static final int MSG_SET_NAMES = 0x2;
-	public static final int MSG_SET_STATE = 0x3;
+	public static final int MSG_SET_CURRENTSTATE = 0x3;
+	public static final int MSG_SET_DESIREDSTATE = 0x4;
 	
 	// commands sent by the pebble
 	public static final int CMD_UNKNOWN = 0x0;
 	public static final int CMD_START_TRACK = 0x1;
 	public static final int CMD_STOP_TRACK = 0x2;
-
-	// pseudo commands sent by mytracks
-	public static final int MYTRACKS_TRACK_STARTED = 0x10;
-	public static final int MYTRACKS_TRACK_STOPPED = 0x11;
+	public static final int CMD_PAUSE_TRACK = 0x3;
+	public static final int CMD_RESUME_TRACK = 0x4;
+	public static final int EVENT_MYTRACKS_STARTED = 0x10;
+	public static final int EVENT_MYTRACKS_STOPPED = 0x11;
 	
 	// mytracks states
 	public static final int STATE_MYTRACKS_NOTHING = 0x1;
-	public static final int STATE_MYTRACKS_RECV_CMD_START_TRACK = 0x3;
-	public static final int STATE_MYTRACKS_RECORDING_STARTED = 0x5;
 	public static final int STATE_MYTRACKS_RECORDING = 0x2;
-	public static final int STATE_MYTRACKS_RECV_CMD_STOP_TRACK = 0x4;
-	public static final int STATE_MYTRACKS_RECORDING_STOPPED = 0x6;
+	public static final int STATE_MYTRACKS_PAUSED = 0x3;
+			
+	public byte currentState;
+	public byte desiredState;
+	public byte currentCommand;
 	
-	public byte mytracksState;
 	private ITrackRecordingService myTracksService;
 	private MyAppSettings myAppSettings;
 
+	private int updateInterval;
 	private SportsData sportsData;
 	private boolean metricUnits;
 	private boolean myapp;
 	private UUID appUUID;
-	public static final UUID alternativeAppUUID = UUID.fromString("5E1ED09C-2624-4F25-8EC1-32B0563036AC");
+	private UUID alternativeAppUUID; // = UUID.fromString("5E1ED09C-2624-4F25-8EC1-32B0563036AC");
 
 	private int sendConfig;
 
@@ -147,7 +151,10 @@ public class PebbleSportsService extends Service {
 		super.onCreate();
 	
 
-		mytracksState = STATE_MYTRACKS_NOTHING;
+		currentState = STATE_MYTRACKS_NOTHING;
+		desiredState = STATE_MYTRACKS_NOTHING;
+		currentCommand = CMD_UNKNOWN;
+		
 		
 		sportsData = new SportsData();		
 		myAppSettings = new MyAppSettings();
@@ -155,24 +162,9 @@ public class PebbleSportsService extends Service {
 
 		// Initialize preferences
 		preferences = PreferenceManager.getDefaultSharedPreferences(this);   
-		metricUnits = preferences.getBoolean("metric", true);
-
-		if ( preferences.getBoolean("UseAlternativeSportsApp",false) ) {
-			myapp = true;
-			appUUID = alternativeAppUUID;
-		} else {
-			myapp = false;
-			appUUID = Constants.SPORTS_UUID;
-		}
+		preferences.registerOnSharedPreferenceChangeListener(this);
 		
-		for(int i=0;(i<MyAppSettings.numFields);i++) {
-			String param = "parameter" + i;
-			String value = preferences.getString(param,ParameterType.NOTHING.getPreferenceString());        
-			Log.i(TAG,"parameter"+ i+ ": " + value);  
-			myAppSettings.setParameter(i, ParameterType.valueOf(value));
-//			Log.i(TAG,"parameter" + i + ": " + myAppSettings.getParameter(i).getPreferenceString());
-		}
-		
+		reloadPreferences();		
 		
 		scheduleTaskExecutor = null;
 		// To receive data back from the sports watch-app, Android
@@ -190,6 +182,36 @@ public class PebbleSportsService extends Service {
 		Log.i(TAG,"finished onCreate");
 	}
 	
+	private void reloadPreferences() {
+		// a nasty way to check any changes in the preferences
+		
+		alternativeAppUUID = UUID.fromString(preferences.getString("AlternativeAppUUID", "5E1ED09C-2624-4F25-8EC1-32B0563036AC"));
+		if ( preferences.getBoolean("UseAlternativeSportsApp",false) ) {
+			myapp = true;
+			appUUID = alternativeAppUUID;
+		} else {
+			myapp = false;
+			appUUID = Constants.SPORTS_UUID;
+		}
+
+		updateInterval = Integer.parseInt(preferences.getString("updateInterval", "5000"));
+				
+		metricUnits = preferences.getBoolean("metric", true);
+		for(int i=0;(i<MyAppSettings.numFields);i++) {
+			String param = "parameter" + i;
+			String value = preferences.getString(param,ParameterType.NOTHING.getPreferenceString());        
+//			Log.i(TAG,"parameter"+ i+ ": " + value);  
+			myAppSettings.setParameter(i, ParameterType.valueOf(value));
+		}
+		
+	}
+	
+	@Override
+	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+		reloadPreferences();
+		sendConfig = 5;
+	};
+	
 	public void stopUpdater() {
 		Log.i(TAG,"Calling stopUpdater");
 		if ( scheduleTaskExecutor != null ) {
@@ -202,17 +224,13 @@ public class PebbleSportsService extends Service {
 	}
 	
 	public void startUpdater() {
+		if ( scheduleTaskExecutor != null ) {
+			return;
+		}
 		Log.i(TAG,"Starting updater");
 //		// recreate new
 		
-		if ( scheduleTaskExecutor != null ) {
-			Log.i(TAG,"Scheduledtask is already running");
-//			stopUpdater();
-			return;
-		}
 		
-		int updateInterval = Integer.parseInt(preferences.getString("updateInterval", "5000"));
-		Log.i(TAG,"Update interval = " + updateInterval);
 		
 		sendConfig = 10;
 		initSportsData();
@@ -233,37 +251,44 @@ public class PebbleSportsService extends Service {
 					Log.i(TAG,"Caught exception: " + e.getMessage());
 				}
 			}    
-		}, 0, 2000, TimeUnit.MILLISECONDS);	  
+		}, 0, updateInterval, TimeUnit.MILLISECONDS);	  
 
 		Log.i(TAG,"Starting updater: done");	
 	}
 	
 	public void processCommand(int cmd) {
-		Log.i(TAG,"processCommand: " + cmd);
 		try {
 
+			startUpdater();
 			
 			switch ( cmd ) {
-			case MYTRACKS_TRACK_STARTED:
-				Log.i(TAG,"MYTRACKS Track started");
-				if ( mytracksState == STATE_MYTRACKS_NOTHING ) {
-					startUpdater();
-				}
-				break;
-			case MYTRACKS_TRACK_STOPPED:
-				Log.i(TAG,"MYTRACKS Track stopped");
-				if ( mytracksState == STATE_MYTRACKS_NOTHING ) {
-					startUpdater();
-				}
-				break;
 			case CMD_START_TRACK:
-				Log.i(TAG,"Start track");
-				mytracksState = STATE_MYTRACKS_RECV_CMD_START_TRACK;
-				startUpdater();
+				Log.i(TAG,"Received CMD_START_TRACK");
+				desiredState = STATE_MYTRACKS_RECORDING;
+				currentCommand = CMD_START_TRACK;
 				break;
 			case CMD_STOP_TRACK:
-				mytracksState = STATE_MYTRACKS_RECV_CMD_STOP_TRACK;
-				startUpdater();
+				Log.i(TAG,"Received CMD_STOP_TRACK");
+				desiredState = STATE_MYTRACKS_NOTHING;
+				currentCommand = CMD_STOP_TRACK;
+				break;
+			case CMD_PAUSE_TRACK:
+				Log.i(TAG,"Received CMD_PAUSE_TRACK");
+				desiredState = STATE_MYTRACKS_PAUSED;
+				currentCommand = CMD_PAUSE_TRACK;
+				break;
+			case CMD_RESUME_TRACK:
+				Log.i(TAG,"Received CMD_RESUME_TRACK");
+				desiredState = STATE_MYTRACKS_RECORDING;
+				currentCommand = CMD_RESUME_TRACK;
+				break;
+			case EVENT_MYTRACKS_STARTED:
+				desiredState = STATE_MYTRACKS_RECORDING;
+				currentCommand = CMD_UNKNOWN;
+				break;
+			case EVENT_MYTRACKS_STOPPED:
+				desiredState = STATE_MYTRACKS_NOTHING;
+				currentCommand = CMD_UNKNOWN;
 				break;
 			}			
 		} catch ( Exception e ) {
@@ -271,10 +296,12 @@ public class PebbleSportsService extends Service {
 		}
 				
 	
-		PebbleDictionary mdata = new PebbleDictionary();
-		mdata.addInt8(MSG_SET_STATE, mytracksState);
-		PebbleKit.sendDataToPebble(getApplicationContext(), alternativeAppUUID, mdata);
-	
+		if ( PebbleKit.isWatchConnected(this)) {
+			PebbleDictionary mdata = new PebbleDictionary();
+			mdata.addInt8(MSG_SET_CURRENTSTATE, currentState);
+			mdata.addInt8(MSG_SET_DESIREDSTATE, desiredState);
+			PebbleKit.sendDataToPebble(getApplicationContext(), alternativeAppUUID, mdata);
+		}
 	}
 	
 	
@@ -350,73 +377,59 @@ public class PebbleSportsService extends Service {
 		try {
 			startMyTracksService();
 			if ( myTracksService != null ) {
-			
-				switch ( mytracksState ) {
-				case STATE_MYTRACKS_NOTHING:
-					Log.i(TAG,"STATE_MYTRACKS_NOTHING");
-					if ( myTracksService.isRecording() ) {
-						mytracksState = STATE_MYTRACKS_RECORDING;					
+				
+				if ( myTracksService.isRecording()) {
+					if ( myTracksService.isPaused() ) {
+						currentState = STATE_MYTRACKS_PAUSED;										
+						Log.i(TAG,"Current state = STATE_MYTRACKS_PAUSED");
 					} else {
+						Log.i(TAG,"Current state = STATE_MYTRACKS_RECORDING");
+						currentState = STATE_MYTRACKS_RECORDING;																
+					}
+				} else {
+					Log.i(TAG,"Current state = STATE_MYTRACKS_NOTHING");
+					currentState = STATE_MYTRACKS_NOTHING;
+				}
+
+				if ( currentCommand != CMD_UNKNOWN ) {
+					switch ( currentCommand ) {
+					case CMD_START_TRACK:
+						if (( currentState == STATE_MYTRACKS_NOTHING )&&(desiredState == STATE_MYTRACKS_RECORDING)) {
+							myTracksService.startNewTrack();
+						}
+						break;
+					case CMD_STOP_TRACK:
+						if ((currentState == STATE_MYTRACKS_RECORDING)&&(desiredState == STATE_MYTRACKS_NOTHING )) {
+							Log.i(TAG,"Stopping track recording");
+							myTracksService.endCurrentTrack();
+						}
+						if ((currentState == STATE_MYTRACKS_PAUSED)&&(desiredState == STATE_MYTRACKS_NOTHING)) {
+							myTracksService.endCurrentTrack();
+							currentCommand = CMD_UNKNOWN;
+						}
+						break;
+					case CMD_PAUSE_TRACK:
+						if ((currentState == STATE_MYTRACKS_RECORDING)&&(desiredState == STATE_MYTRACKS_PAUSED )) {
+							myTracksService.pauseCurrentTrack();
+						}
+						break;
+					case CMD_RESUME_TRACK:
+						if ((currentState == STATE_MYTRACKS_PAUSED)&&(desiredState == STATE_MYTRACKS_RECORDING )) {
+							myTracksService.resumeCurrentTrack();
+						}
+						break;						
+					}
+					currentCommand = CMD_UNKNOWN;
+				}
+				
+							
+				if ( currentState == desiredState ) {					
+					if ( currentState == STATE_MYTRACKS_NOTHING ) {
 						stopUpdater();
-					}
-					break;					
-				case STATE_MYTRACKS_RECV_CMD_START_TRACK:
-					Log.i(TAG,"STATE_MYTRACKS_RECV_CMD_START_TRACK");
-					if ( myTracksService.isRecording() ) {
-						mytracksState = STATE_MYTRACKS_RECORDING;					
-					} else {
-						myTracksService.startNewTrack();
-				 
-						if ( preferences.getBoolean("UseAlternativeSportsApp",false) ) {
-							myapp = true;
-							appUUID = alternativeAppUUID;
-						} else {
-							myapp = false;
-							appUUID = Constants.SPORTS_UUID;
-						}
-
-
-						
-						
-						mytracksState = STATE_MYTRACKS_RECORDING_STARTED;
-					}
-					break;
-				case STATE_MYTRACKS_RECORDING_STARTED:
-					Log.i(TAG,"STATE_MYTRACKS_RECORDING_STARTED");
-					if ( myTracksService.isRecording() ) {
-						mytracksState = STATE_MYTRACKS_RECORDING;											
-					}
-					break;
-				case STATE_MYTRACKS_RECORDING:
-					Log.i(TAG,"STATE_MYTRACKS_RECORDING");
-					if ( ! myTracksService.isRecording() ) {
-						mytracksState = STATE_MYTRACKS_NOTHING;					
-					} else {
-						// a nasty way to check any changes in the preferences
-						metricUnits = preferences.getBoolean("metric", true);
-						for(int i=0;(i<MyAppSettings.numFields);i++) {
-							String param = "parameter" + i;
-							String value = preferences.getString(param,ParameterType.NOTHING.getPreferenceString());        
-//							Log.i(TAG,"parameter"+ i+ ": " + value);  
-							myAppSettings.setParameter(i, ParameterType.valueOf(value));
-						}
-					}
-					break;
-				case STATE_MYTRACKS_RECV_CMD_STOP_TRACK:
-					Log.i(TAG,"STATE_MYTRACKS_RECV_CMD_STOP_TRACK");
-					if ( myTracksService.isRecording() ) {
-						myTracksService.endCurrentTrack();
-						mytracksState = STATE_MYTRACKS_RECORDING_STOPPED;
-					} else {
-						mytracksState = STATE_MYTRACKS_NOTHING;
-					}
-					break;				
-				case STATE_MYTRACKS_RECORDING_STOPPED:
-					Log.i(TAG,"STATE_MYTRACKS_RECORDING_STOPPED");
-					if ( ! myTracksService.isRecording() ) {
-						mytracksState = STATE_MYTRACKS_NOTHING;											
-					}
-					break;
+					}						
+					if ( currentState == STATE_MYTRACKS_PAUSED ) {
+						stopUpdater();
+					}						
 				}
 			}
 		} catch ( Exception e ) {
@@ -431,22 +444,11 @@ public class PebbleSportsService extends Service {
 			Location loc = myTracksProviderUtils.getLastValidTrackPoint();
 			TripStatistics statistics = myTracksProviderUtils.getLastTrack().getTripStatistics();
 
-			//          Log.i(TAG,"accuracy = " + loc.getAccuracy()); // accuracy 10
-			//          Log.i(TAG,"has speed = " + (loc.hasSpeed() ? "yes" : "no"));
-			//          Log.i(TAG,"time = " + loc.getTime());
-			//          Log.i(TAG,"" + loc.toString());
 
 			long trackid = myTracksProviderUtils.getLastTrack().getId();
 			Location startLocation = myTracksProviderUtils.getFirstValidTrackPoint(trackid);
 			
 			
-			if ( myTracksService != null ) {
-				if ( myTracksService.isRecording()) {
-					mytracksState = STATE_MYTRACKS_RECORDING;					
-				} else {
-					mytracksState = STATE_MYTRACKS_NOTHING;
-				}
-			}
 
 			
 			if ( startLocation != null ) {
@@ -485,19 +487,6 @@ public class PebbleSportsService extends Service {
 		Log.i(TAG,"updateSportsData: Done");
 	}
 	
-	private boolean myTracksIsPaused() {
-		if ( myTracksService != null ) {
-			try {
-				if ( myTracksService.isPaused() ) {
-					return true;
-				}
-			} catch ( Exception e ) {
-				
-			}
-		}
-		return false;
-	}
-
 	private void updateMyApp() {
 		Log.i(TAG,"Display at pebble called");
 
@@ -592,21 +581,20 @@ public class PebbleSportsService extends Service {
 			}
 		}
 
+		if ( PebbleKit.isWatchConnected(this)) {
+			PebbleDictionary mdata = new PebbleDictionary();
 
-		PebbleDictionary mdata = new PebbleDictionary();
+			if ( sendConfig > 0 ) {
+//				Log.i(TAG,"Value Names: " + valueNames);
+				mdata.addString(MSG_SET_NAMES, valueNames);
+				sendConfig--;
+			}
 
-		if ( sendConfig > 0 ) {
-//			Log.i(TAG,"Value Names: " + valueNames);
-			mdata.addString(MSG_SET_NAMES, valueNames);
-			sendConfig--;
+			mdata.addString(MSG_SET_VALUES, values);
+			mdata.addInt8(MSG_SET_CURRENTSTATE, currentState);
+			mdata.addInt8(MSG_SET_DESIREDSTATE, desiredState);
+			PebbleKit.sendDataToPebble(getApplicationContext(), alternativeAppUUID, mdata);
 		}
-
-		mdata.addString(MSG_SET_VALUES, values);
-
-		
-
-		mdata.addInt8(MSG_SET_STATE, mytracksState);
-		PebbleKit.sendDataToPebble(getApplicationContext(), alternativeAppUUID, mdata);
 	}
 
 
