@@ -97,10 +97,17 @@ public class MyTracksReceiver extends BroadcastReceiver {
             // do what you need with the data
             PebbleKit.sendAckToPebble(context, transactionId);
 
-            Intent service = new Intent(context,PebbleSportsService.class);
-            service.putExtra("CMD", data.getUnsignedInteger(0x0).intValue());
-            context.startService(service);
-                      
+            if ( data.contains(0x0) ) {
+            	Intent service = new Intent(context,PebbleSportsService.class);
+            	service.putExtra("CMD", data.getUnsignedInteger(0x0).intValue());
+            	context.startService(service);
+            } else if ( data.contains(Constants.SPORTS_STATE_KEY) ) {
+            	Intent service = new Intent(context,PebbleSportsService.class);            	
+            	service.putExtra("SPORTS_STATE_KEY", data.getUnsignedInteger(Constants.SPORTS_STATE_KEY).intValue());
+            	context.startService(service);            	
+            } else {
+            	dumpIntent(intent);
+            }      
         } catch (JSONException e) {
             Log.i(TAG,"failed reived -> dict" + e);
             return;
