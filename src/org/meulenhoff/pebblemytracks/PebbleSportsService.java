@@ -152,7 +152,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 		super.onCreate();
 
 
-		currentState = STATE_MYTRACKS_NULL;
+		currentState = STATE_MYTRACKS_NOTHING;
 		desiredState = STATE_MYTRACKS_NOTHING;
 		currentCommand = CMD_UNKNOWN;
 
@@ -312,6 +312,8 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 				mdata.addInt8(MSG_SET_CURRENTSTATE, currentState);
 				mdata.addInt8(MSG_SET_DESIREDSTATE, desiredState);
 				PebbleKit.sendDataToPebble(getApplicationContext(), alternativeAppUUID, mdata);
+			} else {
+				stopUpdater();
 			}
 		} else {
 			int cmd = intent.getIntExtra("SPORTS_STATE_KEY", Constants.SPORTS_STATE_INIT);
@@ -461,9 +463,6 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 //				Log.i(TAG,"currentState = " + currentState + " desiredState = " + desiredState);
 
 				if ( currentState == desiredState ) {					
-					if ( currentState == STATE_MYTRACKS_NULL ) {
-						stopUpdater();
-					}						
 					if ( currentState == STATE_MYTRACKS_NOTHING ) {
 						stopUpdater();
 					}						
@@ -636,6 +635,8 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 			mdata.addInt8(MSG_SET_CURRENTSTATE, currentState);
 			mdata.addInt8(MSG_SET_DESIREDSTATE, desiredState);
 			PebbleKit.sendDataToPebble(getApplicationContext(), alternativeAppUUID, mdata);
+		} else {
+			stopUpdater();
 		}
 	}
 
@@ -677,8 +678,11 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 		data.addString(Constants.SPORTS_DATA_KEY, String.format(Locale.US,"%.1f",speed));
 
 
-		PebbleKit.sendDataToPebble(getApplicationContext(), appUUID, data);
-
+		if ( PebbleKit.isWatchConnected(this)) {
+			PebbleKit.sendDataToPebble(getApplicationContext(), appUUID, data);
+		} else {
+			stopUpdater();
+		}
 		//		Log.i(TAG,"UpdatePebbleSportsApp: done");
 
 	}
