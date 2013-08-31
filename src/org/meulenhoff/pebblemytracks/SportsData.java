@@ -8,7 +8,17 @@ public class SportsData {
 	public static final double M_TO_MILE = 0.000621371;
 	public static final double M_TO_FEET = 3.28084;
 	public static final double KM_TO_MILES = 0.621371;
-	
+
+	private boolean gpsstatus;
+
+	public boolean getGpsStatus() {
+		return gpsstatus;
+	}
+
+
+	public void setGpsStatus(boolean gpsstatus) {
+		this.gpsstatus = gpsstatus;
+	}
 	private long fakeStartTime;
 	private long locationTime;
 	private double elevationGain;	

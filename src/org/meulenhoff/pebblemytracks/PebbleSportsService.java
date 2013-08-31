@@ -40,7 +40,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 	private final String TAG = "PebbleMyTracks";
 	private int tracknum = 0;
 	
-	
+	public static final int GPS_FIX_TIMEOUT = 30000;
 	
 	// commands sent by smartphone
 	public static final int MSG_SET_VALUES = 0x1;
@@ -48,6 +48,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 	public static final int MSG_SET_CURRENTSTATE = 0x3;
 	public static final int MSG_SET_DESIREDSTATE = 0x4;
 	public static final int MSG_TRACK_SUMMARY = 0x5;
+	public static final int MSG_SET_GPSSTATUS = 0x6;
 
 	// commands sent by the pebble
 	public static final int CMD_UNKNOWN = 0x0;
@@ -273,7 +274,8 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 		SimpleDateFormat stf = new SimpleDateFormat("HH:mm:ss");
 		
 		if ( myapp ) {
-			int cmd = intent.getIntExtra("CMD", CMD_UNKNOWN);
+			
+			int cmd = intent != null ? intent.getIntExtra("CMD", CMD_UNKNOWN) : CMD_UNKNOWN;
 			try {
 
 
@@ -558,8 +560,13 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 			long trackid = myTracksProviderUtils.getLastTrack().getId();
 			Location startLocation = myTracksProviderUtils.getFirstValidTrackPoint(trackid);
 
-
-
+			if ( System.currentTimeMillis() - loc.getTime() > GPS_FIX_TIMEOUT ) {
+				sportsData.setGpsStatus(false);
+			} else {
+				sportsData.setGpsStatus(true);				
+			}
+			
+			
 
 			if ( startLocation != null ) {
 				sportsData.setDistanceToStart(loc.distanceTo(startLocation));
@@ -701,9 +708,12 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 				sendConfig--;
 			}
 
+			
+			
 			mdata.addString(MSG_SET_VALUES, values);
 			mdata.addInt8(MSG_SET_CURRENTSTATE, currentState);
 			mdata.addInt8(MSG_SET_DESIREDSTATE, desiredState);
+			mdata.addInt8(MSG_SET_GPSSTATUS,sportsData.getGpsStatus() ? (byte)1 : (byte)0);
 			PebbleKit.sendDataToPebble(getApplicationContext(), alternativeAppUUID, mdata);
 		} else {
 			stopUpdater();
