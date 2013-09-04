@@ -511,7 +511,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 	}
 
 	private void updateMyTracks() {
-		Log.i(TAG,"updateMyTracks started");		
+//		Log.i(TAG,"updateMyTracks started");		
 		try {
 			startMyTracksService();
 			if ( myTracksService != null ) {
@@ -758,7 +758,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 
 
 	private void updatePebbleSportsApp() {
-			Log.i(TAG,"UpdatePebbleSportsApp");
+//			Log.i(TAG,"UpdatePebbleSportsApp");
 		PebbleDictionary data = new PebbleDictionary();
 
 
