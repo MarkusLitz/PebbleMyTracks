@@ -26,6 +26,7 @@ import com.google.android.apps.mytracks.stats.TripStatistics;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 
 import java.util.UUID;
@@ -416,7 +417,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 			}
 		} else {
 			Log.i(TAG,"Pebble App");
-			int cmd = intent.getIntExtra("CMD", Constants.SPORTS_STATE_INIT);
+			int cmd = intent != null ? intent.getIntExtra("CMD", Constants.SPORTS_STATE_INIT) : Constants.SPORTS_STATE_INIT;
 
 			
 			startUpdater();
@@ -500,7 +501,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 				odometer += trackIterator.next().getTripStatistics().getTotalDistance();
 				sportsData.setOdometer(odometer);
 			}
-
+			
 
 		} catch ( Exception e ) {
 			Log.i(TAG,"Exception during update data" + e.getMessage());
@@ -510,7 +511,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 	}
 
 	private void updateMyTracks() {
-		//		Log.i(TAG,"updateMyTracks started");		
+		Log.i(TAG,"updateMyTracks started");		
 		try {
 			startMyTracksService();
 			if ( myTracksService != null ) {
@@ -579,11 +580,12 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 	}
 
 	private void updateSportsData() {
-		//		Log.i(TAG,"updateSportsData");
+//		Log.i(TAG,"updateSportsData");
 		try {
 			Location loc = myTracksProviderUtils.getLastValidTrackPoint();
 			TripStatistics statistics = myTracksProviderUtils.getLastTrack().getTripStatistics();
 
+//			Log.i(TAG,"updateSportsData 1");
 
 			long trackid = myTracksProviderUtils.getLastTrack().getId();
 			Location startLocation = myTracksProviderUtils.getFirstValidTrackPoint(trackid);
@@ -594,6 +596,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 				sportsData.setGpsStatus(true);				
 			}
 			
+//			Log.i(TAG,"updateSportsData 2");
 			
 
 			if ( startLocation != null ) {
@@ -601,6 +604,9 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 			} else {
 				sportsData.setDistanceToStart(0);
 			}
+
+//			Log.i(TAG,"updateSportsData 3");
+
 			sportsData.setAltitude(loc.getAltitude());
 			sportsData.setStartTime(statistics.getStartTime());
 			sportsData.setStopTime(statistics.getStopTime());
@@ -609,6 +615,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 			sportsData.setAvgspeed(statistics.getAverageSpeed());
 			sportsData.setBearing(loc.getBearing());
 			sportsData.setTotalmovingtime(statistics.getMovingTime());
+//			Log.i(TAG,"updateSportsData 4");
 
 			if ( currentState == STATE_MYTRACKS_RECORDING ) {
 				sportsData.setTotaltime(statistics.getTotalTime() - statistics.getStopTime() + System.currentTimeMillis());					
@@ -618,6 +625,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 			sportsData.setDistance(statistics.getTotalDistance());
 			sportsData.setTotalelevation(statistics.getTotalElevationGain());
 
+//			Log.i(TAG,"updateSportsData 5");
 
 			sportsData.setSpeed(0);
 			if (( loc.getTime() - 10000 < sportsData.getLocationTime())&&( loc.hasSpeed())) {
@@ -750,7 +758,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 
 
 	private void updatePebbleSportsApp() {
-		//		Log.i(TAG,"UpdatePebbleSportsApp");
+			Log.i(TAG,"UpdatePebbleSportsApp");
 		PebbleDictionary data = new PebbleDictionary();
 
 
