@@ -38,7 +38,7 @@ import org.meulenhoff.pebblemytracks.MyAppSettings.ParameterType;
 @SuppressWarnings("unused")
 public class PebbleSportsService extends Service implements OnSharedPreferenceChangeListener {
 	private final String TAG = "PebbleMyTracks";
-	private int tracknum = 0;
+	private int tracknum = -1;
 	
 	public static final int GPS_FIX_TIMEOUT = 30000;
 	
@@ -57,8 +57,8 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 	public static final int CMD_PAUSE_TRACK = 0x3;
 	public static final int CMD_RESUME_TRACK = 0x4;
 	public static final int CMD_GET_STATUS = 0x5;
-	public static final int CMD_NEXT_TRACK = 0x6;
-	public static final int CMD_PREV_TRACK = 0x7;
+	public static final int CMD_TRACK_SUMMARY = 0x6;
+	public static final int CMD_NEXT_TRACK_SUMMARY = 0x7;
 	public static final int EVENT_MYTRACKS_STARTED = 0x10;
 	public static final int EVENT_MYTRACKS_STOPPED = 0x11;
 
@@ -267,36 +267,59 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 	}
 
 
+	private String createTrackSummary(TripStatistics stats) {
+		String result = "";
+		SimpleDateFormat sdf = new SimpleDateFormat("MMM/dd/yyyy HH:mm");
+		
+		if ( metricUnits ) {
+			result = sdf.format(new Date(stats.getStartTime())) + ";" + 
+					String.format(Locale.US,"%.1f km",stats.getTotalDistance() * SportsData.M_TO_KM) + ";";
+					result = result + String.format(Locale.US,"%02d:%02d:%02d;",
+							stats.getTotalTime() / 3600000,
+							(stats.getTotalTime() % 3600000)/60000,
+							(stats.getTotalTime() % 60000)/1000);
+					result = result + String.format(Locale.US,"%.1f kmh;",stats.getAverageSpeed() * SportsData.MPS_TO_KMH);
+					result = result + String.format(Locale.US,"%.1f kmh;",stats.getAverageMovingSpeed() * SportsData.MPS_TO_KMH);
+					result = result + String.format(Locale.US,"%.1f kmh;",stats.getMaxSpeed() * SportsData.MPS_TO_KMH);
+					result = result + String.format(Locale.US,"%.1f m",stats.getTotalElevationGain());
+		} else {
+			result = sdf.format(new Date(stats.getStartTime())) + ";" + 
+					String.format(Locale.US,"%.1f miles",stats.getTotalDistance() * SportsData.M_TO_MILE) + ";";
+			result = result + String.format(Locale.US,"%02d:%02d:%02d",
+					Math.floor(stats.getTotalTime() / 3600000),
+					Math.floor((stats.getTotalTime() % 3600000)/60000),
+					Math.floor((stats.getTotalTime() % 60000)/1000));
+			result = result + String.format(Locale.US,"%.1f mph;",stats.getAverageSpeed() * SportsData.MPS_TO_MPH);
+			result = result + String.format(Locale.US,"%.1f mph;",stats.getAverageMovingSpeed() * SportsData.MPS_TO_MPH);
+			result = result + String.format(Locale.US,"%.1f mph;",stats.getMaxSpeed() * SportsData.MPS_TO_MPH);
+			result = result + String.format(Locale.US,"%.1f ft",stats.getTotalElevationGain() * SportsData.M_TO_FEET);			
+		} 
+		
+		Log.i(TAG,"Track summary: " + result);
+		return result;
+	}
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		SimpleDateFormat sdf = new SimpleDateFormat("MMM dd,yyyy HH:mm");
-		SimpleDateFormat stf = new SimpleDateFormat("HH:mm:ss");
 		
 		if ( myapp ) {
-			
+			Log.i(TAG,"Custom App");
 			int cmd = intent != null ? intent.getIntExtra("CMD", CMD_UNKNOWN) : CMD_UNKNOWN;
 			try {
 
 
 				switch ( cmd ) {
-				case CMD_PREV_TRACK:
-				Log.i(TAG,"Received CMD_PREV_TRACK");
+				case CMD_TRACK_SUMMARY:
+				Log.i(TAG,"Received CMD_TRACK_SUMMARY");
 				if ( PebbleKit.isWatchConnected(this)) {
 					int numTracks = myTracksProviderUtils.getAllTracks().size();
 					PebbleDictionary mdata = new PebbleDictionary();
 					if ( numTracks > 0 ) {
-						if ( tracknum < 0 ) tracknum = numTracks - 1;
+						tracknum = numTracks - 1;
 						Track track = myTracksProviderUtils.getAllTracks().get(tracknum);
 						TripStatistics stats = track.getTripStatistics();
-
-						mdata.addString(MSG_TRACK_SUMMARY, 
-								sdf.format(new Date(stats.getStartTime())) + "\n" + 
-								"Distance: " + String.format(Locale.US,"%.1f",stats.getTotalDistance()/1000) + "\n" + 
-								"Time: " + stf.format(new Date(stats.getTotalTime())) + "\n"+ 
-								"avg: " + String.format(Locale.US,"%.1f %.1f",stats.getAverageSpeed(),stats.getAverageMovingSpeed()) + "\n"+ 
-								"max: " + String.format(Locale.US,"%.1f ",stats.getMaxSpeed()) + "\n"+ 
-								"ele: " + String.format(Locale.US,"%.1f",stats.getTotalElevationGain()));
+						
+						mdata.addString(MSG_TRACK_SUMMARY, createTrackSummary(stats));
  						
 						tracknum--;								
 					} else {
@@ -306,26 +329,21 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 					
 					PebbleKit.sendDataToPebble(getApplicationContext(), alternativeAppUUID, mdata);
 				}
-				break;
-				case CMD_NEXT_TRACK:
+				break; 
+				case CMD_NEXT_TRACK_SUMMARY:
 					Log.i(TAG,"Received CMD_NEXT_TRACK");
 					if ( PebbleKit.isWatchConnected(this)) {
 						int numTracks = myTracksProviderUtils.getAllTracks().size();
+						tracknum--;								
 						PebbleDictionary mdata = new PebbleDictionary();
 						if ( numTracks > 0 ) {
-							if ( tracknum >= numTracks ) tracknum = 0;
+							if ( tracknum < 0 ) tracknum = numTracks - 1;
 							Track track = myTracksProviderUtils.getAllTracks().get(tracknum);
 							TripStatistics stats = track.getTripStatistics();
 							
-							mdata.addString(MSG_TRACK_SUMMARY, 
-									sdf.format(new Date(stats.getStartTime())) + "\n" + 
-									"Distance: " + String.format(Locale.US,"%.1f",stats.getTotalDistance()/1000) + "\n" + 
-									"Time: " + stf.format(new Date(stats.getTotalTime())) + "\n"+ 
-									"avg: " + String.format(Locale.US,"%.1f %.1f",stats.getAverageSpeed(),stats.getAverageMovingSpeed()) + "\n"+ 
-									"max: " + String.format(Locale.US,"%.1f ",stats.getMaxSpeed()) + "\n"+ 
-									"ele: " + String.format(Locale.US,"%.1f",stats.getTotalElevationGain()));
+							mdata.addString(MSG_TRACK_SUMMARY, createTrackSummary(stats));
+
 	 							
-							tracknum++;								
 						} else {
 							tracknum = 0;
 							mdata.addString(MSG_TRACK_SUMMARY, "No recorded tracks available");
@@ -335,40 +353,49 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 					}
 					break;
 				case CMD_GET_STATUS:
+					tracknum = -1;
 					startUpdater();
 					Log.i(TAG,"Received CMD_GET_STATUS");
 					currentCommand = CMD_GET_STATUS;
 					break;
 				case CMD_START_TRACK:
+					tracknum = -1;
+
 					startUpdater();
 					Log.i(TAG,"Received CMD_START_TRACK");
 					desiredState = STATE_MYTRACKS_RECORDING;
 					currentCommand = CMD_START_TRACK;
 					break;
 				case CMD_STOP_TRACK:
+					tracknum = -1;
 					startUpdater();
 					Log.i(TAG,"Received CMD_STOP_TRACK");
 					desiredState = STATE_MYTRACKS_NOTHING;
 					currentCommand = CMD_STOP_TRACK;
 					break;
 				case CMD_PAUSE_TRACK:
+					tracknum = -1;
+
 					startUpdater();
 					Log.i(TAG,"Received CMD_PAUSE_TRACK");
 					desiredState = STATE_MYTRACKS_PAUSED;
 					currentCommand = CMD_PAUSE_TRACK;
 					break;
 				case CMD_RESUME_TRACK:
+					tracknum = -1;
 					Log.i(TAG,"Received CMD_RESUME_TRACK");
 					startUpdater();
 					desiredState = STATE_MYTRACKS_RECORDING;
 					currentCommand = CMD_RESUME_TRACK;
 					break;
 				case EVENT_MYTRACKS_STARTED:
+					tracknum = -1;
 					startUpdater();
 					desiredState = STATE_MYTRACKS_RECORDING;
 					currentCommand = CMD_UNKNOWN;
 					break;
 				case EVENT_MYTRACKS_STOPPED:
+					tracknum = -1;
 					startUpdater();
 					desiredState = STATE_MYTRACKS_NOTHING;
 					currentCommand = CMD_UNKNOWN;
@@ -388,9 +415,10 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 				stopUpdater();
 			}
 		} else {
-			int cmd = intent.getIntExtra("SPORTS_STATE_KEY", Constants.SPORTS_STATE_INIT);
+			Log.i(TAG,"Pebble App");
+			int cmd = intent.getIntExtra("CMD", Constants.SPORTS_STATE_INIT);
 
-
+			
 			startUpdater();
 
 			switch ( cmd ) {

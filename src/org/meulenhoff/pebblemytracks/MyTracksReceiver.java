@@ -103,7 +103,7 @@ public class MyTracksReceiver extends BroadcastReceiver {
             	context.startService(service);
             } else if ( data.contains(Constants.SPORTS_STATE_KEY) ) {
             	Intent service = new Intent(context,PebbleSportsService.class);            	
-            	service.putExtra("SPORTS_STATE_KEY", data.getUnsignedInteger(Constants.SPORTS_STATE_KEY).intValue());
+            	service.putExtra("CMD", data.getUnsignedInteger(Constants.SPORTS_STATE_KEY).intValue());
             	context.startService(service);            	
             } else {
             	dumpIntent(intent);

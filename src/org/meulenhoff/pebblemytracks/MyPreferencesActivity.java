@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import org.meulenhoff.pebblemytracks.MyAppSettings.ParameterType;
 
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.preference.ListPreference;
 import android.preference.Preference;
@@ -29,6 +31,17 @@ public class MyPreferencesActivity extends PreferenceActivity {
 //                          return true;
 //                      }
 //                  });
+
+    Preference button = (Preference)getPreferenceManager().findPreference("button");
+    button.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                    @Override
+                    public boolean onPreferenceClick(Preference arg0) { 
+                    	Uri uri = Uri.parse("http://builds.cloudpebble.net/9/e/9e00e4ecfc434c98a284eac8fccc42ff/watchface.pbw");
+                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                    	return true;
+                    }
+                });
+
       
       ArrayList<String> entries = new ArrayList<String>();
       ArrayList<String> entryValues = new ArrayList<String>();      
