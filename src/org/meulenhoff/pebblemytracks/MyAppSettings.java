@@ -24,7 +24,7 @@ public class MyAppSettings {
 	    MAXGRADE("Maximum Grade","MAX GRADE"),
 	    MINGRADE("Minimum Grade","MIN GRADE"),
 	    
-	    
+	    BEARING("Bearing","BEARING"),
 	    MAXSPEED("Maximum speed","MAX"),
 	    
 	    

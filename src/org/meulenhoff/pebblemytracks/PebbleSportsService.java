@@ -42,7 +42,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 	private int tracknum = -1;
 	
 	public static final int GPS_FIX_TIMEOUT = 30000;
-	
+	private int numTracks;
 	// commands sent by smartphone
 	public static final int MSG_SET_VALUES = 0x1;
 	public static final int MSG_SET_NAMES = 0x2;
@@ -313,7 +313,6 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 				case CMD_TRACK_SUMMARY:
 				Log.i(TAG,"Received CMD_TRACK_SUMMARY");
 				if ( PebbleKit.isWatchConnected(this)) {
-					int numTracks = myTracksProviderUtils.getAllTracks().size();
 					PebbleDictionary mdata = new PebbleDictionary();
 					if ( numTracks > 0 ) {
 						tracknum = numTracks - 1;
@@ -333,8 +332,8 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 				break; 
 				case CMD_NEXT_TRACK_SUMMARY:
 					Log.i(TAG,"Received CMD_NEXT_TRACK");
+					Log.i(TAG,"test 1");
 					if ( PebbleKit.isWatchConnected(this)) {
-						int numTracks = myTracksProviderUtils.getAllTracks().size();
 						tracknum--;								
 						PebbleDictionary mdata = new PebbleDictionary();
 						if ( numTracks > 0 ) {
@@ -403,7 +402,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 					break;
 				}			
 			} catch ( Exception e ) {
-				Log.i(TAG,"Caught exception");
+				Log.i(TAG,"Caught exception" + e.getMessage());// + e.getCause().getMessage());
 			}
 
 
@@ -496,10 +495,12 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 
 			// initialise odometer
 			double odometer = 0;
+			numTracks = 0;
 			Iterator<Track> trackIterator = myTracksProviderUtils.getAllTracks().iterator();
 			while ( trackIterator.hasNext()) {
 				odometer += trackIterator.next().getTripStatistics().getTotalDistance();
 				sportsData.setOdometer(odometer);
+				numTracks++;
 			}
 			
 
@@ -657,6 +658,9 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 			valueNames += type.getPebbleString();
 
 			switch ( type ) {
+			case BEARING:
+				values += String.format("%.0f",sportsData.getBearing());
+				break;
 			case SPEED:
 				values += String.format("%.1f",sportsData.getSpeed() * (metricUnits ? SportsData.MPS_TO_KMH : SportsData.MPS_TO_MPH));
 				break;
