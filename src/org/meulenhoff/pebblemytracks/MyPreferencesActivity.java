@@ -12,9 +12,12 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceScreen;
+import android.util.Log;
 
 
 public class MyPreferencesActivity extends PreferenceActivity {
+	private final String TAG = "PebbleMyTracks";
+	
   @Override
   public void onCreate(Bundle savedInstanceState) {        
       super.onCreate(savedInstanceState);        
@@ -36,7 +39,11 @@ public class MyPreferencesActivity extends PreferenceActivity {
     button.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
                     @Override
                     public boolean onPreferenceClick(Preference arg0) { 
-                    	Uri uri = Uri.parse("http://builds.cloudpebble.net/9/e/9e00e4ecfc434c98a284eac8fccc42ff/watchface.pbw");
+                    	//Uri uri = Uri.parse("http://builds.cloudpebble.net/9/e/9e00e4ecfc434c98a284eac8fccc42ff/watchface.pbw");
+                    	
+                    	Uri uri = Uri.parse("android.resource://org.meulenhoff.pebblemytracks/raw/watchface.pbw");
+//                    	Uri uri = Uri.parse("file:///android_res/raw/watchface.pbw");
+//                    	Log.i(TAG,getResources().openRawResource(R.raw.watchface).toString());
                         startActivity(new Intent(Intent.ACTION_VIEW, uri));
                     	return true;
                     }
