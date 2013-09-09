@@ -42,7 +42,6 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 	private int tracknum = -1;
 	
 	public static final int GPS_FIX_TIMEOUT = 30000;
-	private int numTracks;
 	// commands sent by smartphone
 	public static final int MSG_SET_VALUES = 0x1;
 	public static final int MSG_SET_NAMES = 0x2;
@@ -314,6 +313,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 				Log.i(TAG,"Received CMD_TRACK_SUMMARY");
 				if ( PebbleKit.isWatchConnected(this)) {
 					PebbleDictionary mdata = new PebbleDictionary();
+					int numTracks = myTracksProviderUtils.getAllTracks().size();
 					if ( numTracks > 0 ) {
 						tracknum = numTracks - 1;
 						Track track = myTracksProviderUtils.getAllTracks().get(tracknum);
@@ -333,6 +333,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 				case CMD_NEXT_TRACK_SUMMARY:
 					Log.i(TAG,"Received CMD_NEXT_TRACK");
 					Log.i(TAG,"test 1");
+					int numTracks = myTracksProviderUtils.getAllTracks().size();
 					if ( PebbleKit.isWatchConnected(this)) {
 						tracknum--;								
 						PebbleDictionary mdata = new PebbleDictionary();
@@ -495,12 +496,10 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 
 			// initialise odometer
 			double odometer = 0;
-			numTracks = 0;
 			Iterator<Track> trackIterator = myTracksProviderUtils.getAllTracks().iterator();
 			while ( trackIterator.hasNext()) {
 				odometer += trackIterator.next().getTripStatistics().getTotalDistance();
 				sportsData.setOdometer(odometer);
-				numTracks++;
 			}
 			
 
@@ -602,19 +601,20 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 
 			if ( startLocation != null ) {
 				sportsData.setDistanceToStart(loc.distanceTo(startLocation));
+				sportsData.setBearing(loc.bearingTo(startLocation)-loc.getBearing());
 			} else {
 				sportsData.setDistanceToStart(0);
+				sportsData.setBearing(loc.getBearing());
 			}
 
 //			Log.i(TAG,"updateSportsData 3");
-
+			sportsData.setHeading(loc.getBearing());
 			sportsData.setAltitude(loc.getAltitude());
 			sportsData.setStartTime(statistics.getStartTime());
 			sportsData.setStopTime(statistics.getStopTime());
 			sportsData.setMaxaltitude(statistics.getMaxElevation());
 			sportsData.setAvgmovingspeed(statistics.getAverageMovingSpeed());
 			sportsData.setAvgspeed(statistics.getAverageSpeed());
-			sportsData.setBearing(loc.getBearing());
 			sportsData.setTotalmovingtime(statistics.getMovingTime());
 //			Log.i(TAG,"updateSportsData 4");
 

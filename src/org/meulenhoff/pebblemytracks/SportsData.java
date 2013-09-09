@@ -21,6 +21,15 @@ public class SportsData {
 	}
 	private long fakeStartTime;
 	private long locationTime;
+	private double heading;
+	public double getHeading() {
+		return heading;
+	}
+
+
+	public void setHeading(double heading) {
+		this.heading = heading;
+	}
 	private double elevationGain;	
 	private double distanceToStart;
 	private long startTime;
