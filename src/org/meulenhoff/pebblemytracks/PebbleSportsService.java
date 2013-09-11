@@ -40,6 +40,11 @@ import org.meulenhoff.pebblemytracks.MyAppSettings.ParameterType;
 public class PebbleSportsService extends Service implements OnSharedPreferenceChangeListener {
 	private final String TAG = "PebbleMyTracks";
 	private int tracknum = -1;
+
+//	public static final double MAX_ACCELERATION = 0.02;
+//	public static final int SPEED_SMOOTHING_FACTOR = 25;
+//	private long lastLocationTime;
+//	private double lastLocationSpeed;
 	
 	public static final int GPS_FIX_TIMEOUT = 30000;
 	// commands sent by smartphone
@@ -71,6 +76,8 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 	public byte currentState;
 	public byte desiredState;
 	public byte currentCommand;
+	
+//	private final DoubleBuffer speedBuffer = new DoubleBuffer(SPEED_SMOOTHING_FACTOR);
 
 	private ITrackRecordingService myTracksService;
 	private MyAppSettings myAppSettings;
@@ -502,6 +509,7 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 				sportsData.setOdometer(odometer);
 			}
 			
+//			speedBuffer.reset();
 
 		} catch ( Exception e ) {
 			Log.i(TAG,"Exception during update data" + e.getMessage());
@@ -598,6 +606,15 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 			
 //			Log.i(TAG,"updateSportsData 2");
 			
+//		    if (isValidSpeed(loc.getTime(), loc.getSpeed(), lastLocationTime, lastLocationSpeed) ) {
+//			    speedBuffer.setNext(loc.getSpeed());
+//			    if (loc.getSpeed() > sportsData.getMaxspeed()) {
+//			    	sportsData.setSpeed(loc.getSpeed());
+//			    }
+//		    }
+//			lastLocationTime = loc.getTime();
+//			lastLocationSpeed = loc.getSpeed();
+			
 
 			if ( startLocation != null ) {
 				sportsData.setDistanceToStart(loc.distanceTo(startLocation));
@@ -628,9 +645,11 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 
 //			Log.i(TAG,"updateSportsData 5");
 
-			sportsData.setSpeed(0);
+//			sportsData.setSpeed(speedBuffer.getAverage());
 			if (( loc.getTime() - 10000 < sportsData.getLocationTime())&&( loc.hasSpeed())) {
 				sportsData.setSpeed(loc.getSpeed());
+			} else {
+				sportsData.setSpeed(0);
 			}
 			sportsData.setLocationTime(loc.getTime());
 
@@ -832,5 +851,48 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 		PebbleKit.customizeWatchApp(getApplicationContext(), Constants.PebbleAppType.SPORTS, customAppName, customIcon);
 
 	}
+	
+//	private boolean isValidSpeed(long time, double speed, long lastLocationTime, double lastLocationSpeed) {
+//
+//		/*
+//		 * There are a lot of noisy speed readings. Do the cheapest checks first,
+//		 * most expensive last.
+//		 */
+//		if (speed == 0) {
+//			return false;
+//		}
+//
+//		/*
+//		 * The following code will ignore unlikely readings. 128 m/s seems to be an
+//		 * internal android error code.
+//		 */
+//		if (Math.abs(speed - 128) < 1) {
+//			return false;
+//		}
+//
+//		/*
+//		 * See if the speed seems physically likely. Ignore any speeds that imply
+//		 * acceleration greater than 2g.
+//		 */
+//		long timeDifference = time - lastLocationTime;
+//		double speedDifference = Math.abs(lastLocationSpeed - speed);
+//		if (speedDifference > MAX_ACCELERATION * timeDifference) {
+//			return false;
+//		}
+//
+//		/*
+//		 * Only check if the speed buffer is full. Check that the speed is less than
+//		 * 10X the smoothed average and the speed difference doesn't imply 2g
+//		 * acceleration.
+//		 */
+//		if (!speedBuffer.isFull()) {
+//			return true;
+//		}
+//		double average = speedBuffer.getAverage();
+//		double diff = Math.abs(average - speed);
+//		return (speed < average * 10) && (diff < MAX_ACCELERATION * timeDifference);
+//	}
 
+	
+	
 }
