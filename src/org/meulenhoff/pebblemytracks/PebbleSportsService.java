@@ -593,11 +593,11 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 			Location loc = myTracksProviderUtils.getLastValidTrackPoint();
 			TripStatistics statistics = myTracksProviderUtils.getLastTrack().getTripStatistics();
 
-//			Log.i(TAG,"updateSportsData 1");
-
+//			Log.i(TAG,"updateSportsData 1");			
 			long trackid = myTracksProviderUtils.getLastTrack().getId();
 			Location startLocation = myTracksProviderUtils.getFirstValidTrackPoint(trackid);
-
+			
+			
 			if ( System.currentTimeMillis() - loc.getTime() > GPS_FIX_TIMEOUT ) {
 				sportsData.setGpsStatus(false);
 			} else {
@@ -625,6 +625,11 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 			}
 
 //			Log.i(TAG,"updateSportsData 3");
+			
+			// set heartrate
+			sportsData.setHeartRate(0);
+			
+			
 			sportsData.setHeading(loc.getBearing());
 			sportsData.setAltitude(loc.getAltitude());
 			sportsData.setStartTime(statistics.getStartTime());
@@ -677,6 +682,9 @@ public class PebbleSportsService extends Service implements OnSharedPreferenceCh
 			valueNames += type.getPebbleString();
 
 			switch ( type ) {
+			case HEARTRATE:
+				values += String.format("%.0f",sportsData.getHeartRate());
+				break;
 			case BEARING:
 				values += String.format("%.0f",sportsData.getBearing());
 				break;

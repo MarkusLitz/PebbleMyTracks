@@ -12,6 +12,9 @@ public class MyAppSettings {
 	    DISTANCE("Distance","Distance"),
 	    DISTANCETOSTART("Distance to start","TO START"),
 	    
+	    HEARTRATE("Heart Rate","HR"),
+	    
+	    
 	    AVGSPEED("Average Speed","AVG"),
 	    AVGMOVINGSPEED("Average Moving Speed","AVG"),	    
 	    

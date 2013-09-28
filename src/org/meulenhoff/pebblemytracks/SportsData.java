@@ -10,26 +10,9 @@ public class SportsData {
 	public static final double KM_TO_MILES = 0.621371;
 
 	private boolean gpsstatus;
-
-	public boolean getGpsStatus() {
-		return gpsstatus;
-	}
-
-
-	public void setGpsStatus(boolean gpsstatus) {
-		this.gpsstatus = gpsstatus;
-	}
 	private long fakeStartTime;
 	private long locationTime;
 	private double heading;
-	public double getHeading() {
-		return heading;
-	}
-
-
-	public void setHeading(double heading) {
-		this.heading = heading;
-	}
 	private double elevationGain;	
 	private double distanceToStart;
 	private long startTime;
@@ -48,8 +31,34 @@ public class SportsData {
 	private double bearing; // bearing
 	private double maxaltitude; // max trip altitude
 	private double totalelevation; // total trip elevation
+	private double heartrate; // current heartrate
+
 	
 	
+	public double getHeartRate() {
+		return heartrate;
+	}
+
+	public void setHeartRate(double heartrate) {
+		this.heartrate = heartrate;
+	}
+
+	public boolean getGpsStatus() {
+		return gpsstatus;
+	}
+
+	public void setGpsStatus(boolean gpsstatus) {
+		this.gpsstatus = gpsstatus;
+	}
+	public double getHeading() {
+		return heading;
+	}
+
+
+	public void setHeading(double heading) {
+		this.heading = heading;
+	}
+
 	
 	public long getFakeStartTime() {
 		return fakeStartTime;

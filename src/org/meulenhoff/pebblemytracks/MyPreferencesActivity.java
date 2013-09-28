@@ -1,7 +1,6 @@
 package org.meulenhoff.pebblemytracks;
 
 import java.util.ArrayList;
-//import org.acra.ACRA;
 import org.meulenhoff.pebblemytracks.MyAppSettings.ParameterType;
 
 
@@ -13,7 +12,6 @@ import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceScreen;
 import android.util.Log;
-
 
 public class MyPreferencesActivity extends PreferenceActivity {
 	private final String TAG = "PebbleMyTracks";
@@ -49,6 +47,18 @@ public class MyPreferencesActivity extends PreferenceActivity {
                     }
                 });
 
+//    Preference buttonHome = (Preference)getPreferenceManager().findPreference("buttonHome");
+//    buttonHome.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+//                    @Override
+//                    public boolean onPreferenceClick(Preference arg0) { 
+//                    	// start home location selection activity
+//                    	Intent intent = new Intent(MyPreferencesActivity.this,HomeLocationSelectActivity.class);
+//                    	startActivityForResult(intent, 0);
+//                    	return true;
+//                    }
+//                });
+
+    
       
       ArrayList<String> entries = new ArrayList<String>();
       ArrayList<String> entryValues = new ArrayList<String>();      
@@ -78,6 +88,11 @@ public class MyPreferencesActivity extends PreferenceActivity {
 //      this.startService(service);   
 
   }
+
+  @Override
+  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		Log.i(TAG,"Got onActivityResult " + resultCode + " requestCode " + requestCode);
+	};
 
   
 }
